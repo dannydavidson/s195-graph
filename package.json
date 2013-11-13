@@ -1,0 +1,21 @@
+{
+	"name": "s195-graph",
+	"version": "0.0.1",
+	"description": "Graph modeling exploration for s195",
+	"main": "index.js",
+	"author": "Danny Davidson",
+	"dependencies": {
+		"underscore": "1.5.2",
+		"neo4j": "1.0.0",
+		"async": "0.2.5",
+		"express": "3.4.4"
+	},
+	"devDependencies": {
+		"request": "2.27.0",
+		"optimist": "0.6.0",
+		"grunt": "~0.4.1",
+		"grunt-contrib-watch": "~0.3.1",
+		"grunt-bg-shell": "~2.0.1",
+		"nodemon": "~0.7.6"
+	}
+}
