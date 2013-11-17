@@ -1,21 +1,29 @@
 {
 	"name": "s195-graph",
 	"version": "0.0.1",
-	"description": "Graph modeling exploration for s195",
+	"description": "Graph API for s195",
+	"repository": "git@github.com:dannydavidson/s195-graph.git",
 	"main": "index.js",
 	"author": "Danny Davidson",
 	"dependencies": {
+		"neo4j": "git://github.com/dannydavidson/node-neo4j.git#release",
+		"firebase": "0.6.17",
+		"firebase-token-generator": "*",
+		"redis": "0.9.0",
+		"hiredis": "0.1.15",
+		"zmq": "2.3.0",
 		"underscore": "1.5.2",
-		"neo4j": "1.0.0",
 		"async": "0.2.5",
-		"express": "3.4.4"
+		"restify": "2.5.1",
+		"q": "0.9.7",
+		"flat": "1.0.0",
+		"validator": "2.0.0",
+		"debug": "0.7.4",
+		"swagger-node-restify": "0.1.2"
 	},
 	"devDependencies": {
-		"request": "2.27.0",
-		"optimist": "0.6.0",
 		"grunt": "~0.4.1",
-		"grunt-contrib-watch": "~0.3.1",
-		"grunt-bg-shell": "~2.0.1",
-		"nodemon": "~0.7.6"
+		"grunt-docco": "0.3.0",
+		"grunt-nodemon": "0.1.2"
 	}
 }

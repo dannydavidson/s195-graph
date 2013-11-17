@@ -1,0 +1,21 @@
+Links
+
+http://www.neo4j.org/learn/graphdatabase
+http://mashable.com/2012/09/26/graph-databases/
+http://docs.neo4j.org/chunked/milestone/capabilities-capacity.html
+http://docs.neo4j.org/chunked/milestone/query-schema-index.html
+https://github.com/dannydavidson/s195-graph/blob/master/src/labels.js
+http://www.neo4j.org/develop/labels
+http://docs.neo4j.org/chunked/snapshot/ha-architecture.html
+http://docs.neo4j.org/chunked/milestone/rest-api-transactional.html
+http://docs.neo4j.org/chunked/stable/security-server.html
+http://docs.neo4j.org/chunked/milestone/server-plugins.html
+http://docs.neo4j.org/chunked/milestone/tutorial-traversal-java-api.html
+https://github.com/AnormCypher/AnormCypher
+https://github.com/fynnfeldpausch/ace
+https://github.com/sksamuel/elasticsearch-river-neo4j
+http://docs.neo4j.org/refcard/2.0/
+
+Reference Likes Implementation
+
+https://github.com/dannydavidson/s195-graph
