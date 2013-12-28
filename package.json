@@ -24,6 +24,7 @@
 	"devDependencies": {
 		"grunt": "~0.4.1",
 		"grunt-docco": "0.3.0",
-		"grunt-nodemon": "0.1.2"
+		"grunt-nodemon": "0.1.2",
+		"mysql": "2.0.0-rc1"
 	}
 }

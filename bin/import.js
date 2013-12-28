@@ -1,143 +1,106 @@
 #!/usr/bin/env node
 
 var _ = require( 'underscore' ),
-	request = require( 'request' ),
+	stream = require( 'stream' ),
+	async = require( 'async' ),
+	debugMySql = require( 'debug' )( 'mysql' ),
 	neo = require( '../src/models/neo' ),
 	labels = require( '../src/labels' ),
+	sql = require( 'mysql' ),
 
-	// profile urls
-	listUrl = _.template( 'http://www.sport195.com/api/service/-/profiles/<%= context %>?page=<%= page %>&per_page=<%= per_page %>' ),
-	detailUrl = _.template( 'http://www.sport195.com/api/service/-/profiles/<%= context %>/<%= id %>?mode=<%= mode %>' ),
+	NUM_PARALLEL = 10,
+	READ_THROTTLE = 100,
 
-	// params
-	contexts = [ 'teams', 'athletes' ],
-	start = 0,
-	end = 100,
-	per_page = 100,
+	queryFormat = function ( query, values ) {
+		if ( !values ) {
+			return query;
+		}
 
-	associations = {
-		'athletes': [
-			[ 'teams', 'MEMBER_OF' ],
-			[ 'sports', 'PLAYS' ]
-		],
-		'teams': [
-			[ 'schools', 'PLAYS_FOR' ],
-			[ 'clubs', 'PLAYS_FOR' ],
-			[ 'leagues', 'PLAYS_FOR' ],
-			[ 'sports', 'PLAYS' ]
-		]
+		query = query.replace( /\:(\w+)/g, function ( txt, key ) {
+			if ( values.hasOwnProperty( key ) ) {
+				return this.escape( values[ key ] );
+			}
+			return txt;
+		}.bind( this ) );
+
+		return query.replace( /\:\*(\w+)/g, function ( txt, key ) {
+			if ( values.hasOwnProperty( key ) ) {
+				return sql.escapeId( values[ key ] );
+			}
+			return txt;
+		} )
 	},
 
-	addProfile = function ( profile ) {
-		var url = detailUrl( {
-			context: profile.context,
-			id: profile.id,
-			mode: 'full'
-		} );
+	pool = sql.createPool( {
+		host: '10.9.0.1',
+		user: 'sport195',
+		password: 'sidusa123',
+		database: 'sport195',
+		connectionLimit: NUM_PARALLEL
+	} ),
 
-		request( url, function ( err, response, body ) {
+	nodeInsertQuery = [],
+	nodes,
+	rels;
 
-			var q,
-				data = JSON.parse( body ).data;
-
-			// add associations
-			_( associations[ data.context ] ).each( function ( settings ) {
-				_( data.associations[ settings[ 0 ] ] ).each( function ( association ) {
-
-					var q = [
-
-					'MERGE (left{LABELS} {id: "{id}" })'.replace( '{LABELS}', labels.labels( data.context ) ).replace( '{id}', data.id.toString() ),
-					'MERGE (right{LABELS} {id: "{id}" })'.replace( '{LABELS}', labels.labels( association.context ) ).replace( '{id}', association.id.toString() ),
-
-					'ON CREATE SET left.created = timestamp()',
-					'ON CREATE SET left.display_name = "{display_name}"'.replace( '{display_name}', data.display_name ),
-					'ON CREATE SET left.context = "{context}"'.replace( '{context}', data.context ),
-
-					'ON MATCH SET left.updated = timestamp()',
-					'ON MATCH SET left.display_name = "{display_name}"'.replace( '{display_name}', data.display_name ),
-					'ON MATCH SET left.context = "{context}"'.replace( '{context}', data.context ),
-
-					'ON CREATE SET right.created = timestamp()',
-					'ON CREATE SET right.display_name = "{display_name}"'.replace( '{display_name}', association.display_name ),
-					'ON CREATE SET right.context = "{context}"'.replace( '{context}', association.context ),
-
-					'ON MATCH SET right.updated = timestamp()',
-					'ON MATCH SET right.display_name = "{display_name}"'.replace( '{display_name}', association.display_name ),
-					'ON MATCH SET right.context = "{context}"'.replace( '{context}', association.context ),
-
-					'WITH left, right',
-					'MERGE (left)-[r:{RELATION}]->(right)'.replace( '{RELATION}', settings[ 1 ] ),
-					'SET r.created = timestamp()'
-					];
-
-					neo.query( q );
-
-				} );
-			} );
-
-			// add location
-			if ( data.location ) {
-
-				q = [
-
-				'MERGE (left{LABELS} {id: "{id}" })'.replace( '{LABELS}', labels.labels( data.context ) ).replace( '{id}', data.id.toString() ),
-				'MERGE (right{LABELS} {id: "{id}" })'.replace( '{LABELS}', labels.labels( data.location.context ) ).replace( '{id}', data.location.id.toString() ),
-
-				'ON CREATE SET left.created = timestamp()',
-				'ON CREATE SET left.display_name = "{display_name}"'.replace( '{display_name}', data.display_name ),
-				'ON CREATE SET left.context = "{context}"'.replace( '{context}', data.context ),
-
-				'ON MATCH SET left.updated = timestamp()',
-				'ON MATCH SET left.display_name = "{display_name}"'.replace( '{display_name}', data.display_name ),
-				'ON MATCH SET left.context = "{context}"'.replace( '{context}', data.context ),
-
-				'ON CREATE SET right.created = timestamp()',
-				'ON CREATE SET right.display_name = "{display_name}"'.replace( '{display_name}', data.location.display_name ),
-				'ON CREATE SET right.context = "{context}"'.replace( '{context}', data.location.context ),
-
-				'ON MATCH SET right.updated = timestamp()',
-				'ON MATCH SET right.display_name = "{display_name}"'.replace( '{display_name}', data.location.display_name ),
-				'ON MATCH SET right.context = "{context}"'.replace( '{context}', data.location.context ),
-
-				'WITH left, right',
-				'MERGE (left)-[r:{RELATION}]->(right)'.replace( '{RELATION}', 'IS_LOCATED' ),
-				'SET r.created = timestamp()'
-				];
-
-				neo.query( q );
-
-			}
-
-		} );
-	};
-
-( function () {
-
-	_( contexts ).each( function ( context ) {
-
-		_( _.range( start, end ) ).each( function ( i ) {
-
-			var url = listUrl( {
-				context: context,
-				page: i,
-				per_page: per_page
-			} );
-
-			request( url, function ( err, response, body ) {
-
-				// parse data
-				var data = JSON.parse( body ).data;
-
-				// iterate through profiles
-				_.each( data, function ( record ) {
-					addProfile( record );
-				} );
-
-			} );
-
-		} );
-
+function RowHandler( options, func ) {
+	this.options = options;
+	this.handleRow = func;
+	stream.Writable.call( this, {
+		objectMode: true
 	} );
+}
 
+RowHandler.prototype = Object.create( stream.Writable.prototype, {
+	constructor: {
+		value: RowHandler
+	}
+} );
 
-} )();
+RowHandler.prototype._write = function ( row, encoding, callback ) {
+	this.handleRow( row, callback );
+};
+
+nodes = [
+	new RowHandler( {
+		table: 'athletes',
+		node: 'athletes'
+	}, function ( row, callback ) {
+		console.log( row );
+		callback();
+	} ),
+	new RowHandler( {
+		table: 'athletes',
+		node: 'athletes'
+	}, function ( row, callback ) {
+		console.log( row );
+		callback();
+	} )
+ ];
+
+nodes = _( nodes ).map( function ( node ) {
+	return function ( callback ) {
+		pool.getConnection( function ( err, connection ) {
+			connection.config.queryFormat = queryFormat;
+			var q = connection.query( 'SELECT * FROM :*table LIMIT 100', {
+				table: node.options.table
+			} )
+				.on( 'error', function ( err ) {
+					console.log( err );
+				} )
+				.on( 'end', function () {
+					console.log( 'end' );
+					connection.release();
+					callback();
+				} )
+				.stream( {
+					highWaterMark: READ_THROTTLE
+				} )
+				.pipe( node );
+		} );
+	}
+} );
+
+async.parallelLimit( nodes, NUM_PARALLEL, function () {
+	console.log( 'done' );
+} );
